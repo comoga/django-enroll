@@ -1,5 +1,3 @@
-
-
 Features
 ========
 
@@ -25,8 +23,7 @@ There are three ways to change django-eroll defualt functionality.
 
 1. passing argument to classed based view (usually from URL mapping)
 This is Django classed base view feature. It allows change any class property
-by passing new value to constructor kwargs.
- (see Django classed base view documentation)
+by passing new value to constructor kwargs. (see Django classed base view documentation)
 
 2. Set proper variable in your settings.py (see settings section)
 
@@ -49,29 +46,31 @@ Settings variables
 
 All settings are optional. Defaults are:
 
-ENROLL_SIGNUP_FORM_USER_FIELDS = ('username', 'email')
-ENROLL_SIGNUP_FORM_VALIDATORS = {
-    'username': [
-        'enroll.validators.UniqueUsernameValidator'
-    ],
-    'email': [
-        'enroll.validators.UniqueEmailValidator'
-    ],
-}
+::
 
-ENROLL_EMAIL_BANNED_DOMAINS = []     (enable EmailDomainValidator to has effect)
-ENROLL_PASSWORD_MIN_LENGTH = 4
-ENROLL_FORBIDDEN_PASSWORDS = []      (enable TooSimplePasswordValidator to has effect)
-ENROLL_FORBID_USERNAME_DERIVED_PASSWORD = False
+    ENROLL_SIGNUP_FORM_USER_FIELDS = ('username', 'email')
+    ENROLL_SIGNUP_FORM_VALIDATORS = {
+        'username': [
+            'enroll.validators.UniqueUsernameValidator'
+        ],
+        'email': [
+            'enroll.validators.UniqueEmailValidator'
+        ],
+    }
 
-ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES  = [ username ]  (use enroll.backends.ModelBackend to has effect)
+    ENROLL_EMAIL_BANNED_DOMAINS = []     #(enable EmailDomainValidator to has effect)
+    ENROLL_PASSWORD_MIN_LENGTH = 4
+    ENROLL_FORBIDDEN_PASSWORDS = []      #(enable TooSimplePasswordValidator to has effect)
+    ENROLL_FORBID_USERNAME_DERIVED_PASSWORD = False
 
-ENROLL_ACCOUNT_VERIFICATION_REQUIRED = True
-ENROLL_ACTIVATION_VALID_DAYS = 30 #unlimited if False
-ENROLL_ACTIVATION_KEY_LENGTH = 12
-ENROLL_ACTIVATION_SEND_EMAIL = True
+    ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES  = [ username ]  #(use enroll.backends.ModelBackend to has effect)
 
-LOGIN_REDIRECT_URL (also used by django auth)
-LOGOUT_REDIRECT_URL
+    ENROLL_ACCOUNT_VERIFICATION_REQUIRED = True
+    ENROLL_ACTIVATION_VALID_DAYS = 30 #unlimited if False
+    ENROLL_ACTIVATION_KEY_LENGTH = 12
+    ENROLL_ACTIVATION_SEND_EMAIL = True
+
+    LOGIN_REDIRECT_URL #(also used by django auth)
+    LOGOUT_REDIRECT_URL
 
 
