@@ -60,7 +60,7 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
     def form_valid(self, form):
         response = super(SignUpView, self).form_valid(form)
         if self.object:
-            post_register.send(sender=self.object.__class__)
+            post_register.send(sender=self.object.__class__, user=self.object, request=self.request)
         self.send_success_message()
         return response
 

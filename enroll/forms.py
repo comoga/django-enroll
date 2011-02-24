@@ -53,6 +53,7 @@ class BaseSignUpForm(forms.ModelForm):
         return ActivationKey.objects.create_user_key(user)
 
     def get_username(self, cleaned_data):
+        """User email as username if username field is not present"""
         return self.cleaned_data.get('username', self.cleaned_data.get('email'))
 
     def save(self):
@@ -61,7 +62,7 @@ class BaseSignUpForm(forms.ModelForm):
         email = self.cleaned_data.get('email')
         username = self.get_username(self.cleaned_data)
 
-        user = User.objects.create_user(password, email, username)
+        user = User.objects.create_user(username, email, password)
 
         if not self.verification_required:
             return user
@@ -81,7 +82,7 @@ class SignUpForm(BaseSignUpForm):
     def check_username_derived_password(self, username, password):
         username = username.lower()
         password = password.lower()
-        if password.startswith(username) or password.reverse().startswith(username):
+        if password.startswith(username) or password[::-1].startswith(username):
             raise forms.ValidationError(_(u'Password cannot be derived from username'))
 
     def clean(self):

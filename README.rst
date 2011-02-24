@@ -19,7 +19,7 @@ Installation
 Functionality overriding
 ========================
 
-There are three ways to change django-eroll defualt functionality.
+There are three ways to change django-enroll default functionality.
 
 1. passing argument to classed based view (usually from URL mapping)
 This is Django classed base view feature. It allows change any class property
@@ -58,12 +58,12 @@ All settings are optional. Defaults are:
         ],
     }
 
-    ENROLL_EMAIL_BANNED_DOMAINS = []     #(enable EmailDomainValidator to has effect)
+    ENROLL_EMAIL_BANNED_DOMAINS = []     #(enable EmailDomainValidator to have effect)
     ENROLL_PASSWORD_MIN_LENGTH = 4
-    ENROLL_FORBIDDEN_PASSWORDS = []      #(enable TooSimplePasswordValidator to has effect)
+    ENROLL_FORBIDDEN_PASSWORDS = []      #(enable TooSimplePasswordValidator to have effect)
     ENROLL_FORBID_USERNAME_DERIVED_PASSWORD = False
 
-    ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES  = [ username ]  #(use enroll.backends.ModelBackend to has effect)
+    ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES  = [ username ]  #(use enroll.backends.ModelBackend to have effect)
 
     ENROLL_ACCOUNT_VERIFICATION_REQUIRED = True
     ENROLL_ACTIVATION_VALID_DAYS = 30 #unlimited if False

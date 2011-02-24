@@ -22,8 +22,10 @@ class ActivationKeyManager(models.Manager):
         if account_activation_days is None: #can be False
             account_activation_days = getattr(settings, 'ENROLL_ACTIVATION_VALID_DAYS', 30)
 
-        if self.account_activation_days:
-            expire_date = datetime.now() + timedelta(days=self.account_activation_days)
+        if account_activation_days:
+            expire_date = datetime.now() + timedelta(days=account_activation_days)
+        else:
+            expire_date = None
         return self.create(user=user, key=key, expire_date=expire_date)
 
 
