@@ -20,7 +20,7 @@ class ActivationKeyManager(models.Manager):
         key = key[:getattr(settings, 'ENROLL_ACTIVATION_KEY_LENGTH', 12)]
 
         if account_activation_days is None: #can be False
-            account_activation_days = getattr(settings, 'ENROLL_ACTIVATION_VALID_DAYS', 30)
+            account_activation_days = getattr(settings, 'ENROLL_ACTIVATION_VALID_DAYS', 14)
 
         if account_activation_days:
             expire_date = datetime.now() + timedelta(days=account_activation_days)
@@ -63,7 +63,7 @@ class ActivationKey(models.Model):
 and define your own signal"""
 
 @receiver(post_save, sender=ActivationKey)
-def post_register(sender, **kwargs):
+def post_registration(sender, **kwargs):
     if getattr(settings, 'ENROLL_ACTIVATION_SEND_EMAIL', True) and kwargs.get('created'):
         instance = kwargs.get('instance')
         instance.notify_user()

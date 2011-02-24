@@ -55,7 +55,7 @@ class TooSimplePasswordValidator(object):
     DIGIT_SEQUENCE = 2 * string.digits
 
     def validate_sequnce(self, password, sequence, message):
-        if password in sequence or reversed(password):
+        if password in sequence or password[::-1] in sequence:
             raise ValidationError(message)
 
     def __init__(self, min_unique_chars=3):

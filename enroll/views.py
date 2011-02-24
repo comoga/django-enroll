@@ -4,7 +4,7 @@ from datetime import datetime
 from django import http
 from django.views.generic.edit import BaseCreateView, FormView
 from django.views.generic.base import TemplateResponseMixin, View, TemplateView
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login, get_backends
 
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.conf import settings
@@ -14,7 +14,7 @@ from django.views.decorators.cache import never_cache
 
 from enroll.forms import SignUpForm, RequestPassingAuthenticationForm
 from enroll.models import ActivationKey
-from enroll.signals import post_login, post_register, post_logout
+from enroll.signals import post_login, post_logout
 
 class SuccessMessageMixin(object):
     """Mixin to create django.contrib.messages"""
@@ -59,8 +59,6 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
 
     def form_valid(self, form):
         response = super(SignUpView, self).form_valid(form)
-        if self.object:
-            post_register.send(sender=self.object.__class__, user=self.object, request=self.request)
         self.send_success_message()
         return response
 
@@ -77,7 +75,7 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
 
     def get(self, request, activation_key):
         try:
-            key_model = ActivationKey.objects.get(key=activation_key, expire_data__gt=datetime.now())
+            key_model = ActivationKey.objects.get(key=activation_key, expire_date__gt=datetime.now())
         except ActivationKey.DoesNotExist:
             return self.on_failure(activation_key)
         return self.on_success(key_model)
@@ -89,6 +87,8 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
         key_model.activate_user()
         key_model.delete()
 
+        backend = get_backends()[0] #user must be annotated with backend
+        user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
         auth_login(self.request, user)
         post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
         self.send_success_message()

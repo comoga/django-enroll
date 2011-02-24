@@ -9,6 +9,7 @@ from django.contrib.auth import authenticate
 from enroll.models import ActivationKey
 from enroll.validators import UniqueUsernameValidator, UniqueEmailValidator
 from enroll import import_class
+from enroll.signals import post_registration
 
 class BaseSignUpFormMetaclass(ModelFormMetaclass):
     '''Adds defined field validators to class fields'''
@@ -64,13 +65,14 @@ class BaseSignUpForm(forms.ModelForm):
 
         user = User.objects.create_user(username, email, password)
 
-        if not self.verification_required:
-            return user
+        if self.verification_required:
+            user.is_active = False
+            user.save()
+            activation_key = self.create_activation_key(user)
+        else:
+            activation_key = None
 
-        user.is_active = False
-        user.save()
-        self.create_activation_key(user)
-
+        post_registration.send(sender=user.__class__, user=user, request=self.request, activation_key=activation_key)
         return user
 
 

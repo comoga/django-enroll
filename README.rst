@@ -66,7 +66,7 @@ All settings are optional. Defaults are:
     ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES  = [ username ]  #(use enroll.backends.ModelBackend to have effect)
 
     ENROLL_ACCOUNT_VERIFICATION_REQUIRED = True
-    ENROLL_ACTIVATION_VALID_DAYS = 30 #unlimited if False
+    ENROLL_ACTIVATION_VALID_DAYS = 14 #unlimited if False
     ENROLL_ACTIVATION_KEY_LENGTH = 12
     ENROLL_ACTIVATION_SEND_EMAIL = True
 
