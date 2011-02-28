@@ -12,9 +12,12 @@ from django.contrib.sites.models import get_current_site
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 
-from enroll.forms import SignUpForm, RequestPassingAuthenticationForm
-from enroll.models import VerificationKey
+from enroll.forms import SignUpForm, RequestPassingAuthenticationForm,\
+    PasswordResetStepOneForm, PasswordResetStepTwoForm
+from enroll.models import VerificationToken
 from enroll.signals import post_login, post_logout
+
+# --------------  Helper Views ----------------------
 
 class SuccessMessageMixin(object):
     """Mixin to create django.contrib.messages"""
@@ -44,10 +47,17 @@ class FailureMessageMixin(object):
             messages.add_message(self.request, messages.WARNING, msg)
 
 
+class SuccessMessageFormView(SuccessMessageMixin, FormView):
+
+    def form_valid(self, form):
+        response = super(SuccessMessageFormView, self).form_valid(form)
+        self.send_success_message()
+        return response
+
+# --------------  Regular Views ----------------------
 
 class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
-    """see also BaseSignUpForm. It contains almost all logic around user registration."""
-
+    """See also BaseSignUpForm. It contains almost all logic around user registration."""
     template_name = 'registration/registration_form.html'
     form_class = SignUpForm
     success_url = '/'
@@ -66,24 +76,18 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
 class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
     failure_url = '/'
-    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', False)
+    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
 
-    def get_success_message(self):
-        return self.success_message
-
-    def get_failure_message(self):
-        return self.failure_message
-
-    def get(self, request, activation_key):
+    def get(self, request, verification_key):
         try:
-            key_model = VerificationKey.objects.get(
-                            key=activation_key,
+            token = VerificationToken.objects.get(
+                            key=verification_key,
                             expire_date__gt=datetime.now(),
-                            verification_key=VerificationKey.TYPE_SIGN_UP
+                            verification_type=VerificationToken.TYPE_SIGN_UP
                         )
-        except VerificationKey.DoesNotExist:
-            return self.on_failure(activation_key)
-        return self.on_success(key_model)
+        except VerificationToken.DoesNotExist:
+            return self.on_failure(verification_key)
+        return self.on_success(token)
 
     def login_user(self, user):
         anonymous_session_data = dict(self.request.session.items())
@@ -92,11 +96,11 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
         auth_login(self.request, user)
         post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
 
-    def on_success(self, key_model):
-        user = key_model.user
+    def on_success(self, token):
+        user = token.user
 
-        key_model.activate_user()
-        key_model.delete()
+        token.activate_user()
+        token.delete()
 
         if self.login_on_success:
             self.login_user(user)
@@ -104,9 +108,46 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
         self.send_success_message()
         return http.HttpResponseRedirect(self.success_url)
 
-    def on_failure(self, activation_key):
+    def on_failure(self, verification_key):
         self.send_failure_message()
         return http.HttpResponseRedirect(self.failure_url)
+
+
+class PasswordResetView(SuccessMessageFormView):
+    """Redirect to given URL or render page from template on success. Optionally send message using djnago.contrib.messages"""
+    template_name = 'registration/password_reset_form.html'
+    form_class = PasswordResetStepOneForm
+    success_url = '/'
+
+    def get_form_kwargs(self):
+        kwargs = dict(request=self.request)
+        kwargs.update(super(PasswordResetView, self).get_form_kwargs())
+        return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        return super(PasswordResetView, self).form_valid(form)
+
+
+class VerifyPasswordResetView(SuccessMessageFormView):
+    template_name ='registration/password_reset_confirm.html'
+    form_class = PasswordResetStepTwoForm
+    success_url = '/'
+
+    def get_form_kwargs(self):
+        kwargs = dict(request=self.request, user=self.token.user)
+        kwargs.update(super(VerifyPasswordResetView, self).get_form_kwargs())
+        return kwargs
+
+    @method_decorator(never_cache)
+    def dispatch(self, request, verification_key, *args, **kwargs):
+        self.token = VerificationToken.objects.get(key=verification_key)
+        return super(VerifyPasswordResetView, self).dispatch(request, *args, **kwargs)
+
+    def form_valid(self, form):
+        form.save()
+        self.token.delete()
+        return super(VerifyPasswordResetView, self).form_valid(form)
 
 
 class LoginView(FormView):
@@ -183,10 +224,3 @@ class LogoutView(TemplateView):
         if url:
             return http.HttpResponseRedirect(url)
         return super(LogoutView, self).get(self, request, *args, **kwargs)
-
-
-#class ResetPasswordView(SuccessMessageMixin, TemplateView):
-#    url = '/'
-#
-#class VerifyResetPasswordView(View):
-#    pass
