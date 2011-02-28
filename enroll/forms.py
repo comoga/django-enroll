@@ -6,7 +6,7 @@ from django.forms.models import ModelFormMetaclass
 from django.contrib.auth.forms import AuthenticationForm as DjangoAuthenticationForm
 from django.contrib.auth import authenticate
 
-from enroll.models import ActivationKey
+from enroll.models import VerificationKey
 from enroll.validators import UniqueUsernameValidator, UniqueEmailValidator
 from enroll import import_class
 from enroll.signals import post_registration
@@ -51,7 +51,7 @@ class BaseSignUpForm(forms.ModelForm):
         self.request = request
 
     def create_activation_key(self, user):
-        return ActivationKey.objects.create_user_key(user)
+        return VerificationKey.objects.create_user_key(user)
 
     def get_username(self, cleaned_data):
         """User email as username if username field is not present"""

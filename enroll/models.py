@@ -12,7 +12,7 @@ from django.conf import settings
 from django.dispatch.dispatcher import receiver
 from django.db.models.signals import post_save
 
-class ActivationKeyManager(models.Manager):
+class VerificationKeyManager(models.Manager):
 
     def create_user_key(self, user, account_activation_days=None):
         salt = str(random.random())
@@ -29,12 +29,24 @@ class ActivationKeyManager(models.Manager):
         return self.create(user=user, key=key, expire_date=expire_date)
 
 
-class ActivationKey(models.Model):
+class VerificationKey(models.Model):
+
+    TYPE_SIGN_UP = 'S'
+    TYPE_EMAIL_CHANGE = 'E'
+    TYPE_PASSWORD_RESET = 'P'
+
+    VERIFICATION_TYPE_CHOICES = [
+        (TYPE_SIGN_UP, _('Sign Up')),
+        (TYPE_EMAIL_CHANGE, _('Email change')),
+        (TYPE_PASSWORD_RESET, _('Password reset')),
+    ]
+
     user = models.ForeignKey(User)
     key = models.CharField(_('activation key'), max_length=40)
     expire_date = models.DateTimeField(null=True, blank=True)
+    vefirication_type = models.CharField(max_length=1, choices=VERIFICATION_TYPE_CHOICES)
 
-    objects = ActivationKeyManager()
+    objects = VerificationKeyManager()
 
     def __unicode__(self):
         return self.key
@@ -62,7 +74,7 @@ class ActivationKey(models.Model):
 """ To override notification behavior, set settings.ENROLL_ACTIVATION_SEND_EMAIL to False
 and define your own signal"""
 
-@receiver(post_save, sender=ActivationKey)
+@receiver(post_save, sender=VerificationKey)
 def post_registration(sender, **kwargs):
     if getattr(settings, 'ENROLL_ACTIVATION_SEND_EMAIL', True) and kwargs.get('created'):
         instance = kwargs.get('instance')

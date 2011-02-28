@@ -5,25 +5,26 @@ from south.v2 import SchemaMigration
 from django.db import models
 
 class Migration(SchemaMigration):
-
+    
     def forwards(self, orm):
-
-        # Adding model 'ActivationKey'
-        db.create_table('enroll_activationkey', (
+        
+        # Adding model 'VerificationKey'
+        db.create_table('enroll_verificationkey', (
+            ('vefirication_type', self.gf('django.db.models.fields.CharField')(max_length=1)),
             ('expire_date', self.gf('django.db.models.fields.DateTimeField')(null=True, blank=True)),
             ('id', self.gf('django.db.models.fields.AutoField')(primary_key=True)),
             ('key', self.gf('django.db.models.fields.CharField')(max_length=40)),
             ('user', self.gf('django.db.models.fields.related.ForeignKey')(to=orm['auth.User'])),
         ))
-        db.send_create_signal('enroll', ['ActivationKey'])
-
-
+        db.send_create_signal('enroll', ['VerificationKey'])
+    
+    
     def backwards(self, orm):
-
-        # Deleting model 'ActivationKey'
-        db.delete_table('enroll_activationkey')
-
-
+        
+        # Deleting model 'VerificationKey'
+        db.delete_table('enroll_verificationkey')
+    
+    
     models = {
         'auth.group': {
             'Meta': {'object_name': 'Group'},
@@ -61,13 +62,14 @@ class Migration(SchemaMigration):
             'model': ('django.db.models.fields.CharField', [], {'max_length': '100'}),
             'name': ('django.db.models.fields.CharField', [], {'max_length': '100'})
         },
-        'enroll.activationkey': {
-            'Meta': {'object_name': 'ActivationKey'},
+        'enroll.verificationkey': {
+            'Meta': {'object_name': 'VerificationKey'},
             'expire_date': ('django.db.models.fields.DateTimeField', [], {'null': 'True', 'blank': 'True'}),
             'id': ('django.db.models.fields.AutoField', [], {'primary_key': 'True'}),
             'key': ('django.db.models.fields.CharField', [], {'max_length': '40'}),
-            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"})
+            'user': ('django.db.models.fields.related.ForeignKey', [], {'to': "orm['auth.User']"}),
+            'vefirication_type': ('django.db.models.fields.CharField', [], {'max_length': '1'})
         }
     }
-
+    
     complete_apps = ['enroll']

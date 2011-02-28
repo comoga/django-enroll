@@ -13,7 +13,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 
 from enroll.forms import SignUpForm, RequestPassingAuthenticationForm
-from enroll.models import ActivationKey
+from enroll.models import VerificationKey
 from enroll.signals import post_login, post_logout
 
 class SuccessMessageMixin(object):
@@ -66,6 +66,7 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
 class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
     failure_url = '/'
+    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', False)
 
     def get_success_message(self):
         return self.success_message
@@ -75,22 +76,31 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
 
     def get(self, request, activation_key):
         try:
-            key_model = ActivationKey.objects.get(key=activation_key, expire_date__gt=datetime.now())
-        except ActivationKey.DoesNotExist:
+            key_model = VerificationKey.objects.get(
+                            key=activation_key,
+                            expire_date__gt=datetime.now(),
+                            verification_key=VerificationKey.TYPE_SIGN_UP
+                        )
+        except VerificationKey.DoesNotExist:
             return self.on_failure(activation_key)
         return self.on_success(key_model)
 
-    def on_success(self, key_model):
-        user = key_model.user
+    def login_user(self, user):
         anonymous_session_data = dict(self.request.session.items())
-
-        key_model.activate_user()
-        key_model.delete()
-
         backend = get_backends()[0] #user must be annotated with backend
         user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
         auth_login(self.request, user)
         post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
+
+    def on_success(self, key_model):
+        user = key_model.user
+
+        key_model.activate_user()
+        key_model.delete()
+
+        if self.login_on_success:
+            self.login_user(user)
+
         self.send_success_message()
         return http.HttpResponseRedirect(self.success_url)
 
@@ -173,3 +183,10 @@ class LogoutView(TemplateView):
         if url:
             return http.HttpResponseRedirect(url)
         return super(LogoutView, self).get(self, request, *args, **kwargs)
+
+
+#class ResetPasswordView(SuccessMessageMixin, TemplateView):
+#    url = '/'
+#
+#class VerifyResetPasswordView(View):
+#    pass
