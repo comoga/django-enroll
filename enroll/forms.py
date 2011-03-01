@@ -10,22 +10,33 @@ from enroll.models import VerificationToken
 from enroll.validators import UniqueUsernameValidator, UniqueEmailValidator
 from enroll import import_class
 from enroll.signals import post_registration
+from django.forms.forms import DeclarativeFieldsMetaclass
 
-class BaseSignUpFormMetaclass(ModelFormMetaclass):
-    '''Adds defined field validators to class fields'''
+def add_validators_to_class_fields(new_class):
+    for field, validators in new_class.field_validators.iteritems():
+        if field not in new_class.base_fields:
+            #field is not present on form - TODO logger.warning
+            continue
+        for validator in validators:
+            if isinstance(validator, basestring):
+                validator = import_class(validator)()
+            elif isinstance(validator, type):
+                validator = validator()
+            new_class.base_fields[field].validators.append(validator)
 
+
+class ExplicitValidationModelFormMetaclass(ModelFormMetaclass):
+    """Adds explicit declared field validators to class fields"""
     def __new__(cls, name, bases, attrs):
-        new_class = super(BaseSignUpFormMetaclass, cls).__new__(cls, name, bases, attrs)
-        for field, validators in new_class.field_validators.iteritems():
-            if field not in new_class.base_fields:
-                #TODO logger.warning - validator for non-existing field on model
-                continue
-            for validator in validators:
-                if isinstance(validator, basestring):
-                    validator = import_class(validator)()
-                elif isinstance(validator, type):
-                    validator = validator()
-                new_class.base_fields[field].validators.append(validator)
+        new_class = super(ExplicitValidationModelFormMetaclass, cls).__new__(cls, name, bases, attrs)
+        add_validators_to_class_fields(new_class)
+        return new_class
+
+class ExplicitValidationFormMetaclass(DeclarativeFieldsMetaclass):
+    """Adds explicit declared field validators to class fields"""
+    def __new__(cls, name, bases, attrs):
+        new_class = super(ExplicitValidationFormMetaclass, cls).__new__(cls, name, bases, attrs)
+        add_validators_to_class_fields(new_class)
         return new_class
 
 
@@ -41,11 +52,11 @@ class RequestAcceptingForm(forms.Form):
 class BaseSignUpForm(forms.ModelForm):
     """If username is not between fields use email as user's username"""
 
-    __metaclass__ = BaseSignUpFormMetaclass
+    __metaclass__ = ExplicitValidationModelFormMetaclass
 
     verification_required = getattr(settings , 'ENROLL_ACCOUNT_VERIFICATION_REQUIRED', True)
 
-    field_validators = getattr(settings , 'ENROLL_SIGNUP_FORM_VALIDATORS', {
+    field_validators = getattr(settings , 'ENROLL_FORM_VALIDATORS', {
         'username': [ UniqueUsernameValidator ],
         'email': [ UniqueEmailValidator ],
     })
@@ -157,8 +168,15 @@ class PasswordResetStepOneForm(RequestAcceptingForm):
 
 class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
 
+    __metaclass__ = ExplicitValidationFormMetaclass
+
     password1 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'new password'), min_length=getattr(settings , 'ENROLL_PASSWORD_MIN_LENGTH', 4))
     password2 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'new password (again)'))
+
+    field_validators = { #we need only validators for password1 and password2 from settings value
+        'password1': getattr(settings, 'ENROLL_FORM_VALIDATORS', {}).get('password1', []),
+        'password2': getattr(settings, 'ENROLL_FORM_VALIDATORS', {}).get('password2', [])
+    }
 
     def __init__(self, *args, **kwargs):
         user = kwargs.pop('user')

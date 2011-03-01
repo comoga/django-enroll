@@ -49,14 +49,14 @@ All settings are optional. Defaults are:
 ::
 
     ENROLL_SIGNUP_FORM_USER_FIELDS = ('username', 'email')
-    ENROLL_SIGNUP_FORM_VALIDATORS = {
+    ENROLL_FORM_VALIDATORS = {
         'username': [
             'enroll.validators.UniqueUsernameValidator'
         ],
         'email': [
             'enroll.validators.UniqueEmailValidator'
         ],
-    }
+    } #used by SignUpForm and PasswordResetForm (if contains password validator)
 
     ENROLL_EMAIL_BANNED_DOMAINS = []     #(enable EmailDomainValidator to have effect)
     ENROLL_PASSWORD_MIN_LENGTH = 4
@@ -78,7 +78,6 @@ All settings are optional. Defaults are:
 TODO
 ====
 
-Apply password validators also for password reset usecase.
 Email change usecase.
 
 
