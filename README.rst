@@ -32,14 +32,17 @@ by passing new value to constructor kwargs. (see Django classed base view docume
 
 Views
 =====
+
+Supports django.contrib.messages - see  SuccessMessageMixin, FailureMessageMixin
+
+Form views can end (on success) with redirect or display template.
+
 SignUpView
 VerifyAccountView
 LoginView
 LogoutView
-
-TODO - password reset, password change, email change ...
-
-
+PasswordResetView
+VerifyPasswordResetView
 
 Settings variables
 ==================
@@ -79,5 +82,6 @@ TODO
 ====
 
 Email change usecase.
+Password change usecase.
 
 

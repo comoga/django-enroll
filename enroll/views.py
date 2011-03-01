@@ -16,6 +16,7 @@ from enroll.forms import SignUpForm, RequestPassingAuthenticationForm,\
     PasswordResetStepOneForm, PasswordResetStepTwoForm
 from enroll.models import VerificationToken
 from enroll.signals import post_login, post_logout
+from django.http import HttpResponseNotFound
 
 # --------------  Helper Views ----------------------
 
@@ -47,6 +48,18 @@ class FailureMessageMixin(object):
             messages.add_message(self.request, messages.WARNING, msg)
 
 
+class AutoLoginMixin(object):
+
+    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
+
+    def login_user(self, user):
+        anonymous_session_data = dict(self.request.session.items())
+        backend = get_backends()[0] #user must be annotated with backend
+        user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+        auth_login(self.request, user)
+        post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
+
+
 class SuccessMessageFormView(SuccessMessageMixin, FormView):
 
     def form_valid(self, form):
@@ -73,10 +86,9 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
         return response
 
 
-class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
+class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, AutoLoginMixin, View):
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
     failure_url = '/'
-    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
 
     def get(self, request, verification_key):
         try:
@@ -88,13 +100,6 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, View):
         except VerificationToken.DoesNotExist:
             return self.on_failure(verification_key)
         return self.on_success(token)
-
-    def login_user(self, user):
-        anonymous_session_data = dict(self.request.session.items())
-        backend = get_backends()[0] #user must be annotated with backend
-        user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
-        auth_login(self.request, user)
-        post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
 
     def on_success(self, token):
         user = token.user
@@ -129,23 +134,32 @@ class PasswordResetView(SuccessMessageFormView):
         return super(PasswordResetView, self).form_valid(form)
 
 
-class VerifyPasswordResetView(SuccessMessageFormView):
+class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView):
     template_name ='registration/password_reset_confirm.html'
     form_class = PasswordResetStepTwoForm
     success_url = '/'
+    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request, user=self.token.user)
         kwargs.update(super(VerifyPasswordResetView, self).get_form_kwargs())
         return kwargs
 
+    def token_does_not_exist(self, request, verification_key):
+        return HttpResponseNotFound()
+
     @method_decorator(never_cache)
     def dispatch(self, request, verification_key, *args, **kwargs):
-        self.token = VerificationToken.objects.get(key=verification_key)
+        try:
+            self.token = VerificationToken.objects.get(key=verification_key)
+        except VerificationToken.DoesNotExist:
+            return self.token_does_not_exist(request, verification_key)
         return super(VerifyPasswordResetView, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.save()
+        if self.login_on_success:
+            self.login_user(self.token.user)
         self.token.delete()
         return super(VerifyPasswordResetView, self).form_valid(form)
 
