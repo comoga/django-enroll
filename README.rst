@@ -10,8 +10,6 @@ to easy override of any part.
 To fulfill such aim new Django classed base views are very helpful.
 So django-enroll requires Django 1.3 (it means trunk development version nowadays).
 
-Code base is under active development -> still beta and buggy, everything can change :)
-
 Installation
 ============
 

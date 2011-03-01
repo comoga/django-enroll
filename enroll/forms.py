@@ -12,6 +12,7 @@ from enroll import import_class
 from enroll.signals import post_registration
 from django.forms.forms import DeclarativeFieldsMetaclass
 
+
 def add_validators_to_class_fields(new_class):
     for field, validators in new_class.field_validators.iteritems():
         if field not in new_class.base_fields:
@@ -40,8 +41,16 @@ class ExplicitValidationFormMetaclass(DeclarativeFieldsMetaclass):
         return new_class
 
 
+class RequestAcceptingModelForm(forms.ModelForm):
+    """Helper class. Store request on form instance."""
+
+    def __init__(self, *args, **kwargs):
+        request = kwargs.pop('request')
+        super(RequestAcceptingModelForm, self).__init__(*args, **kwargs)
+        self.request = request
+
 class RequestAcceptingForm(forms.Form):
-    """Helper class"""
+    """Helper class. Store request on form instance."""
 
     def __init__(self, *args, **kwargs):
         request = kwargs.pop('request')
@@ -49,8 +58,8 @@ class RequestAcceptingForm(forms.Form):
         self.request = request
 
 
-class BaseSignUpForm(forms.ModelForm):
-    """If username is not between fields use email as user's username"""
+class BaseSignUpForm(RequestAcceptingModelForm):
+    """If username is not between fields uses email as user's username"""
 
     __metaclass__ = ExplicitValidationModelFormMetaclass
 
@@ -94,6 +103,7 @@ class BaseSignUpForm(forms.ModelForm):
 
         post_registration.send(sender=user.__class__, user=user, request=self.request, token=token)
         return user
+
 
 class PasswordFormMixin(object):
     """Helper class.

@@ -39,7 +39,7 @@ class FailureMessageMixin(object):
     failure_message = None
 
     def get_failure_message(self):
-        return self.success_message
+        return self.failure_message
 
     def send_failure_message(self):
         msg = self.get_failure_message()
@@ -49,6 +49,7 @@ class FailureMessageMixin(object):
 
 
 class AutoLoginMixin(object):
+    """Provides method to log user"""
 
     login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
 
