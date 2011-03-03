@@ -74,11 +74,6 @@ class BaseSignUpForm(RequestAcceptingModelForm):
         model = User
         fields = getattr(settings , 'ENROLL_SIGNUP_FORM_USER_FIELDS', ('username', 'email'))
 
-    def __init__(self, *args, **kwargs):
-        request = kwargs.pop('request')
-        super(BaseSignUpForm, self).__init__(*args, **kwargs)
-        self.request = request
-
     def create_verification_token(self, user):
         return VerificationToken.objects.create_token(user, verification_type=VerificationToken.TYPE_SIGN_UP)
 
