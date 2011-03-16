@@ -11,7 +11,7 @@ except IOError:
 
 setup(
     name='django-enroll',
-    version='0.1',
+    version='0.2',
     url="http://github.org/comoga/django-enroll",
     description='Flexible user registration and user account management for Django',
     long_description=long_description,

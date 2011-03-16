@@ -1,9 +1,16 @@
-import string
+import string, re
 
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
 from django.utils.translation import ugettext_lazy as _
 from django.conf import settings
+from django.core.validators import RegexValidator
+
+
+class PlainUsernameValidator(RegexValidator):
+    regex = re.compile(r'^[-+@\.\w]+$')
+    message = _(u'Only letters, digits and -+.@ characters are allowed.')
+    code = None
 
 
 class UniqueUsernameValidator(object):

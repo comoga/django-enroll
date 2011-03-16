@@ -16,7 +16,7 @@ class VerificationTokenManager(models.Manager):
 
     def create_token(self, user, verification_type, account_activation_days=None):
         salt = str(random.random())
-        key = sha_constructor(salt+user.username).hexdigest()
+        key = sha_constructor(salt+user.username.encode('ascii', 'ignore')).hexdigest()
         key = key[:getattr(settings, 'ENROLL_VERIFICATION_TOKEN_LENGTH', 12)]
 
         if account_activation_days is None: #can be False
