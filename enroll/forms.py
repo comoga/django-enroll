@@ -33,6 +33,7 @@ class ExplicitValidationModelFormMetaclass(ModelFormMetaclass):
         add_validators_to_class_fields(new_class)
         return new_class
 
+
 class ExplicitValidationFormMetaclass(DeclarativeFieldsMetaclass):
     """Adds explicit declared field validators to class fields"""
     def __new__(cls, name, bases, attrs):
@@ -48,6 +49,7 @@ class RequestAcceptingModelForm(forms.ModelForm):
         request = kwargs.pop('request')
         super(RequestAcceptingModelForm, self).__init__(*args, **kwargs)
         self.request = request
+
 
 class RequestAcceptingForm(forms.Form):
     """Helper class. Store request on form instance."""
@@ -121,8 +123,9 @@ class PasswordFormMixin(object):
 
 
 class SignUpForm(PasswordFormMixin, BaseSignUpForm):
-    password1 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'password'), min_length=getattr(settings , 'ENROLL_PASSWORD_MIN_LENGTH', 4))
-    password2 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'password (again)'))
+    password1 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'password'),
+                                min_length=getattr(settings , 'ENROLL_PASSWORD_MIN_LENGTH', 4))
+    password2 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'password (again)'), )
 
     def clean(self):
         self.clean_password_couple()
@@ -196,3 +199,4 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
         self.user.set_password(self.cleaned_data['password1'])
         self.user.save()
         return self.user
+

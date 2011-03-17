@@ -79,5 +79,3 @@ class TooSimplePasswordValidator(object):
         self.validate_sequnce(password, self.DIGIT_SEQUENCE, _(u'Password cannot be ascending or descending sequence.'))
         self.validate_sequnce(password, getattr(settings , 'ENROLL_FORBIDDEN_PASSWORDS', []), _(u'Password is not allowed.'))
 
-
-
