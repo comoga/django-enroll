@@ -51,7 +51,7 @@ class FailureMessageMixin(object):
 class AutoLoginMixin(object):
     """Provides method to log user"""
 
-    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
+    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
 
     def login_user(self, user):
         anonymous_session_data = dict(self.request.session.items())
@@ -157,7 +157,7 @@ class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView):
     template_name ='registration/password_reset_confirm.html'
     form_class = PasswordResetStepTwoForm
     success_url = '/'
-    login_on_success = getattr(settings, 'ENROLL_LOGIN_AFTER_ACTIVATION', True)
+    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request, user=self.token.user)

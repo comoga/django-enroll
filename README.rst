@@ -65,12 +65,13 @@ All settings are optional. Defaults are:
     ENROLL_FORBID_USERNAME_DERIVED_PASSWORD = False
 
     ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES  = [ username ]  #(use enroll.backends.ModelBackend to have effect)
+    ENROLL_AUTH_BACKEND_INACTIVE_USER = True  #is allowed login authentication by inactive user
 
-    ENROLL_ACCOUNT_VERIFICATION_REQUIRED = True
     ENROLL_VERIFICATION_TOKEN_VALID_DAYS = 14 #unlimited if False
     ENROLL_VERIFICATION_TOKEN_LENGTH = 12
     ENROLL_SEND_VERIFICATION_EMAIL = True
-    ENROLL_LOGIN_AFTER_ACTIVATION = True
+    ENROLL_AUTO_LOGIN = True
+    ENROLL_AUTO_VERIFY = True
 
     LOGIN_REDIRECT_URL #(also used by django auth)
     LOGOUT_REDIRECT_URL

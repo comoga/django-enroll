@@ -65,7 +65,7 @@ class BaseSignUpForm(RequestAcceptingModelForm):
 
     __metaclass__ = ExplicitValidationModelFormMetaclass
 
-    verification_required = getattr(settings , 'ENROLL_ACCOUNT_VERIFICATION_REQUIRED', True)
+    auto_verify_user = getattr(settings , 'ENROLL_AUTO_VERIFY', False)
 
     field_validators = getattr(settings , 'ENROLL_FORM_VALIDATORS', {
         'username': [ UniqueUsernameValidator ],
@@ -91,12 +91,12 @@ class BaseSignUpForm(RequestAcceptingModelForm):
 
         user = User.objects.create_user(username, email, password)
 
-        if self.verification_required:
+        if self.auto_verify_user:
+            token = None
+        else:
             user.is_active = False
             user.save()
             token = self.create_verification_token(user)
-        else:
-            token = None
 
         post_registration.send(sender=user.__class__, user=user, request=self.request, token=token)
         return user

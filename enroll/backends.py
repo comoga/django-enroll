@@ -7,6 +7,8 @@ from django.conf import settings
 class ModelBackend(DjangoModelBackend):
     """Extended authentication backend"""
 
+    supports_inactive_user = getattr(settings, 'ENROLL_AUTH_BACKEND_INACTIVE_USER', True )
+
     #should contains only unique columns !!!
     login_attributes = getattr(settings, 'ENROLL_AUTH_BACKEND_LOGIN_ATTRIBUTES', ['username'] )
 
