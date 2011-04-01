@@ -55,10 +55,22 @@ class AutoLoginMixin(object):
 
     def login_user(self, user):
         anonymous_session_data = dict(self.request.session.items())
-        backend = get_backends()[0] #user must be annotated with backend
-        user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+        for backend in get_backends():
+            if not user.is_active:
+                #inactive user login is supported by Django 1.3
+                if not getattr(backend, 'supports_inactive_user', False):
+                    continue
+            #user must be annotated with backend
+            user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+            break
+
         auth_login(self.request, user)
-        post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
+        post_login.send(
+            sender=user.__class__,
+            request=self.request,
+            user=user,
+            session_data=anonymous_session_data
+        )
 
 
 class SuccessMessageFormView(SuccessMessageMixin, FormView):
@@ -70,7 +82,7 @@ class SuccessMessageFormView(SuccessMessageMixin, FormView):
 
 # --------------  Regular Views ----------------------
 
-class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
+class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, BaseCreateView):
     """See also BaseSignUpForm. It contains almost all logic around user registration."""
     template_name = 'registration/registration_form.html'
     form_class = SignUpForm
@@ -83,6 +95,12 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, BaseCreateView):
 
     def form_valid(self, form):
         response = super(SignUpView, self).form_valid(form)
+
+        if self.login_on_success:
+            #try to login here is OK. Following method log inactive user only if
+            #backend with such support exists
+            self.login_user(self.object)
+
         self.send_success_message()
         return response
 
