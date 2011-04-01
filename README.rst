@@ -71,7 +71,7 @@ All settings are optional. Defaults are:
     ENROLL_VERIFICATION_TOKEN_LENGTH = 12
     ENROLL_SEND_VERIFICATION_EMAIL = True
     ENROLL_AUTO_LOGIN = True
-    ENROLL_AUTO_VERIFY = True
+    ENROLL_AUTO_VERIFY = False
 
     LOGIN_REDIRECT_URL #(also used by django auth)
     LOGOUT_REDIRECT_URL
