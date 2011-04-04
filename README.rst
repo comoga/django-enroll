@@ -80,7 +80,8 @@ All settings are optional. Defaults are:
 TODO
 ====
 
-Email change usecase.
+define success_message directly in enroll for classes for all SuccessMessageMixin mixins
 Password change usecase.
+
 
 

@@ -5,18 +5,18 @@ from django import http
 from django.views.generic.edit import BaseCreateView, FormView
 from django.views.generic.base import TemplateResponseMixin, View, TemplateView
 from django.contrib.auth import login as auth_login, get_backends
-
 from django.contrib.auth import REDIRECT_FIELD_NAME
 from django.conf import settings
 from django.contrib.sites.models import get_current_site
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
+from django.http import HttpResponseNotFound
+#from django.utils.translation import ugettext_lazy as _
 
 from enroll.forms import SignUpForm, RequestPassingAuthenticationForm,\
     PasswordResetStepOneForm, PasswordResetStepTwoForm, ChangeEmailForm
 from enroll.models import VerificationToken
 from enroll.signals import post_login, post_logout
-from django.http import HttpResponseNotFound
 
 # --------------  Helper Views ----------------------
 
@@ -79,6 +79,7 @@ class SuccessMessageFormView(SuccessMessageMixin, FormView):
         response = super(SuccessMessageFormView, self).form_valid(form)
         self.send_success_message()
         return response
+
 
 # --------------  Regular Views ----------------------
 
@@ -192,6 +193,10 @@ class ChangeEmailView(SuccessMessageFormView):
         kwargs = dict(request=self.request)
         kwargs.update(super(ChangeEmailView, self).get_form_kwargs())
         return kwargs
+
+    def form_valid(self, form):
+        form.save()
+        return super(ChangeEmailView, self).form_valid(form)
 
 
 class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):

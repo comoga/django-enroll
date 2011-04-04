@@ -216,7 +216,7 @@ class ChangeEmailForm(RequestAcceptingForm):
     def create_verification_token(self, user, email):
         return VerificationToken.objects.create_token(user, verification_type=VerificationToken.TYPE_EMAIL_CHANGE, email=email)
 
-    def save(self, user):
+    def save(self):
         self.create_verification_token(self.request.user, self.cleaned_data['email'])
 
 
