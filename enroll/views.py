@@ -13,7 +13,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
 
 from enroll.forms import SignUpForm, RequestPassingAuthenticationForm,\
-    PasswordResetStepOneForm, PasswordResetStepTwoForm
+    PasswordResetStepOneForm, PasswordResetStepTwoForm, ChangeEmailForm
 from enroll.models import VerificationToken
 from enroll.signals import post_login, post_logout
 from django.http import HttpResponseNotFound
@@ -181,6 +181,46 @@ class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView):
             self.login_user(self.token.user)
         self.token.delete()
         return super(VerifyPasswordResetView, self).form_valid(form)
+
+
+class ChangeEmailView(SuccessMessageFormView):
+    form_class = ChangeEmailForm
+    template_name = 'registration/change_email.html'
+    success_url = '/'
+
+    def get_form_kwargs(self):
+        kwargs = dict(request=self.request)
+        kwargs.update(super(ChangeEmailView, self).get_form_kwargs())
+        return kwargs
+
+
+class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):
+    success_url = '/'
+    failure_url = '/'
+
+    def get(self, request, verification_key):
+        try:
+            token = VerificationToken.objects.get(
+                            key=verification_key,
+                            expire_date__gt=datetime.now(),
+                            verification_type=VerificationToken.TYPE_EMAIL_CHANGE
+                        )
+        except VerificationToken.DoesNotExist:
+            return self.on_failure(verification_key)
+        return self.on_success(token)
+
+    def on_success(self, token):
+        user = token.user
+        user.email = token.email
+        user.save()
+        token.delete()
+
+        self.send_success_message()
+        return http.HttpResponseRedirect(self.success_url)
+
+    def on_failure(self, verification_key):
+        self.send_failure_message()
+        return http.HttpResponseRedirect(self.failure_url)
 
 
 class LoginView(FormView):

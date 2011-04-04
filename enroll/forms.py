@@ -12,6 +12,11 @@ from enroll import import_class
 from enroll.signals import post_registration
 from django.forms.forms import DeclarativeFieldsMetaclass
 
+DEFAULT_FORM_VALIDATORS = {
+    'username': [ UniqueUsernameValidator ],
+    'email': [ UniqueEmailValidator ],
+}
+
 
 def add_validators_to_class_fields(new_class):
     for field, validators in new_class.field_validators.iteritems():
@@ -67,17 +72,14 @@ class BaseSignUpForm(RequestAcceptingModelForm):
 
     auto_verify_user = getattr(settings , 'ENROLL_AUTO_VERIFY', False)
 
-    field_validators = getattr(settings , 'ENROLL_FORM_VALIDATORS', {
-        'username': [ UniqueUsernameValidator ],
-        'email': [ UniqueEmailValidator ],
-    })
+    field_validators = getattr(settings , 'ENROLL_FORM_VALIDATORS', DEFAULT_FORM_VALIDATORS)
 
     class Meta:
         model = User
         fields = getattr(settings , 'ENROLL_SIGNUP_FORM_USER_FIELDS', ('username', 'email'))
 
-    def create_verification_token(self, user):
-        return VerificationToken.objects.create_token(user, verification_type=VerificationToken.TYPE_SIGN_UP)
+    def create_verification_token(self, user, email):
+        return VerificationToken.objects.create_token(user, verification_type=VerificationToken.TYPE_SIGN_UP, email=email)
 
     def get_username(self, cleaned_data):
         """User email as username if username field is not present"""
@@ -96,7 +98,7 @@ class BaseSignUpForm(RequestAcceptingModelForm):
         else:
             user.is_active = False
             user.save()
-            token = self.create_verification_token(user)
+            token = self.create_verification_token(user, email)
 
         post_registration.send(sender=user.__class__, user=user, request=self.request, token=token)
         return user
@@ -182,8 +184,8 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
     password2 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'new password (again)'))
 
     field_validators = { #we need only validators for password1 and password2 from settings value
-        'password1': getattr(settings, 'ENROLL_FORM_VALIDATORS', {}).get('password1', []),
-        'password2': getattr(settings, 'ENROLL_FORM_VALIDATORS', {}).get('password2', [])
+        'password1': getattr(settings, 'ENROLL_FORM_VALIDATORS', DEFAULT_FORM_VALIDATORS).get('password1', []),
+        'password2': getattr(settings, 'ENROLL_FORM_VALIDATORS', DEFAULT_FORM_VALIDATORS).get('password2', [])
     }
 
     def __init__(self, *args, **kwargs):
@@ -199,4 +201,22 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
         self.user.set_password(self.cleaned_data['password1'])
         self.user.save()
         return self.user
+
+
+class ChangeEmailForm(RequestAcceptingForm):
+
+    __metaclass__ = ExplicitValidationFormMetaclass
+
+    email = forms.EmailField(required=True, widget=forms.TextInput(attrs=dict(maxlength=75)), label=_(u'email address'))
+
+    field_validators = { #we need only validators for email from settings value
+        'email': getattr(settings, 'ENROLL_FORM_VALIDATORS', DEFAULT_FORM_VALIDATORS ).get('email', []),
+    }
+
+    def create_verification_token(self, user, email):
+        return VerificationToken.objects.create_token(user, verification_type=VerificationToken.TYPE_EMAIL_CHANGE, email=email)
+
+    def save(self, user):
+        self.create_verification_token(self.request.user, self.cleaned_data['email'])
+
 
