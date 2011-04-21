@@ -53,7 +53,7 @@ class VerificationToken(models.Model):
         return self.key
 
     def activate_user(self):
-        self.user.is_active = True;
+        self.user.is_active = True
         self.user.save()
 
     def notify_user(self, subject, mail_template):
