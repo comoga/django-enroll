@@ -88,6 +88,7 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, Bas
     template_name = 'registration/registration_form.html'
     form_class = SignUpForm
     success_url = '/'
+    success_message = _('An activation link has been sent to your e-mail address.')
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request)
@@ -108,7 +109,9 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, Bas
 
 class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, AutoLoginMixin, View):
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
+    success_message = _('Your account has been activated.')
     failure_url = '/'
+    failure_message = _('Invalid activation link.')
 
     def get(self, request, verification_key):
         try:
@@ -142,7 +145,7 @@ class PasswordResetView(SuccessMessageFormView):
     template_name = 'registration/password_reset_form.html'
     form_class = PasswordResetStepOneForm
     success_url = '/'
-    success_message = _('An verification link has been sent to the your e-mail address.')
+    success_message = _('A verification link has been sent to your e-mail address.')
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request)
@@ -179,10 +182,13 @@ class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView, FailureMes
 
     def form_valid(self, form):
         form.save()
+        #update the password first while it may also activate the user if inactive
+        result = super(VerifyPasswordResetView, self).form_valid(form)
+        #login only after the user has been made active
         if self.login_on_success:
             self.login_user(self.token.user)
         self.token.delete()
-        return super(VerifyPasswordResetView, self).form_valid(form)
+        return result
 
     def on_failure(self, request, verification_key):
         self.send_failure_message()

@@ -199,6 +199,7 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
 
     def save(self):
         self.user.set_password(self.cleaned_data['password1'])
+        self.user.is_active = True
         self.user.save()
         return self.user
 
