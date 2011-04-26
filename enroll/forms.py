@@ -111,19 +111,21 @@ class PasswordFormMixin(object):
     Each form field must be on Form derived class. Declare password1 and password2 in derived class
     Also call clean_password_couple from clean"""
 
-    def check_username_derived_password(self, username, password):
-        username = username.lower()
-        password = password.lower()
+    def validate_derived_passoword(self):
+        if 'password1' not in self.cleaned_data or 'username' not in self.cleaned_data:
+            return
+        username = self.cleaned_data['username'].lower()
+        password = self.cleaned_data['password1'].lower()
         if password.startswith(username) or password[::-1].startswith(username):
-            raise forms.ValidationError(_(u'Password cannot be derived from username'))
+            self._errors["password1"] = self.error_class([_(u'Password cannot be derived from username')])
+            del self.cleaned_data["password1"]
 
-    def clean_password_couple(self):
-        if 'password1' in self.cleaned_data:
-            if getattr(settings, 'ENROLL_FORBID_USERNAME_DERIVED_PASSWORD', False) and 'username' in self.cleaned_data:
-                self.check_username_derived_password(self.cleaned_data['username'], self.cleaned_data['password1'])
-            if 'password2' in self.cleaned_data:
-                if self.cleaned_data['password1'] != self.cleaned_data['password2']:
-                    raise forms.ValidationError(_(u'You must type the same password each time'))
+    def validate_password_couple(self):
+        if 'password1' not in self.cleaned_data or 'password2' not in self.cleaned_data:
+            return
+        if self.cleaned_data['password1'] != self.cleaned_data['password2']:
+            self._errors["password2"] = self.error_class([_(u"Passwords don't match")])
+            del self.cleaned_data["password2"]
 
 
 class SignUpForm(PasswordFormMixin, BaseSignUpForm):
@@ -132,7 +134,9 @@ class SignUpForm(PasswordFormMixin, BaseSignUpForm):
     password2 = forms.CharField(required=True, widget=forms.PasswordInput, label=_(u'password (again)'), )
 
     def clean(self):
-        self.clean_password_couple()
+        if getattr(settings, 'ENROLL_FORBID_USERNAME_DERIVED_PASSWORD', False):
+            self.validate_derived_passoword()
+        self.validate_password_couple()
         return super(SignUpForm, self).clean()
 
 
