@@ -21,14 +21,16 @@ DEFAULT_FORM_VALIDATORS = {
 def add_validators_to_class_fields(new_class):
     for field, validators in new_class.field_validators.iteritems():
         if field not in new_class.base_fields:
-            #field is not present on form - TODO logger.warning
             continue
         for validator in validators:
             if isinstance(validator, basestring):
                 validator = import_class(validator)()
             elif isinstance(validator, type):
                 validator = validator()
-            new_class.base_fields[field].validators.append(validator)
+            field_instance = new_class.base_fields[field]
+            if not hasattr(field_instance, '_enroll_validators_initialized'):
+                field_instance.validators.append(validator)
+                field_instance._enroll_validators_initialized = True
 
 
 class ExplicitValidationModelFormMetaclass(ModelFormMetaclass):
