@@ -205,6 +205,7 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
         self.validate_password_couple()
         return super(PasswordResetStepTwoForm, self).clean()
 
+
     def save(self):
         self.user.set_password(self.cleaned_data['password1'])
         self.user.is_active = True
