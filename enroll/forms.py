@@ -109,7 +109,7 @@ class BaseSignUpForm(RequestAcceptingModelForm):
 class PasswordFormMixin(object):
     """Helper class.
     Each form field must be on Form derived class. Declare password1 and password2 in derived class
-    Also call clean_password_couple from clean"""
+    Also call validate_password_couple from clean"""
 
     def validate_derived_passoword(self):
         if 'password1' not in self.cleaned_data or 'username' not in self.cleaned_data:
@@ -200,7 +200,7 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
         self.user = user
 
     def clean(self):
-        self.clean_password_couple()
+        self.validate_password_couple()
         return super(PasswordResetStepTwoForm, self).clean()
 
     def save(self):
