@@ -200,7 +200,9 @@ class PasswordResetStepTwoForm(PasswordFormMixin, RequestAcceptingForm):
         self.user = user
 
     def clean(self):
-        self.clean_password_couple()
+        if getattr(settings, 'ENROLL_FORBID_USERNAME_DERIVED_PASSWORD', False):
+            self.validate_derived_passoword()
+        self.validate_password_couple()
         return super(PasswordResetStepTwoForm, self).clean()
 
     def save(self):
