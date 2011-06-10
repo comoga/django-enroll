@@ -10,7 +10,6 @@ from django.conf import settings
 from django.contrib.sites.models import get_current_site
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from django.http import HttpResponseNotFound
 from django.utils.translation import ugettext_lazy as _
 
 from enroll.forms import SignUpForm, RequestPassingAuthenticationForm,\
