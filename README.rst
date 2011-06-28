@@ -17,6 +17,9 @@ Installation
 Functionality overriding
 ========================
 
+Todo refactoring, because ...
+"There should be one-- and preferably only one --obvious way to do it."
+
 There are three ways to change django-enroll default functionality.
 
 1. passing argument to classed based view (usually from URL mapping)
