@@ -251,6 +251,11 @@ class LoginView(FormView):
     def dispatch(self, *args, **kwargs):
         return super(LoginView, self).dispatch(*args, **kwargs)
 
+    def get_form_kwargs(self):
+        kwargs = dict(request=self.request)
+        kwargs.update(super(LoginView, self).get_form_kwargs())
+        return kwargs
+
     def get_redirect_to(self):
         return self.request.REQUEST.get(self.redirect_field_name, '')
 

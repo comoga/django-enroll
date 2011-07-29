@@ -141,7 +141,7 @@ class SignUpForm(PasswordFormMixin, BaseSignUpForm):
         return super(SignUpForm, self).clean()
 
 
-class RequestPassingAuthenticationForm(DjangoAuthenticationForm):
+class RequestPassingAuthenticationForm(RequestAcceptingForm, DjangoAuthenticationForm):
     """
         Pass request to backend.
         Also patched to allow login by inactive users. Maybe it will be fixed in Django 1.3
