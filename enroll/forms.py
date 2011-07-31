@@ -156,7 +156,11 @@ class RequestPassingAuthenticationForm(RequestAcceptingForm, DjangoAuthenticatio
         password = self.cleaned_data.get('password')
 
         if username and password:
+            #First try to pass also request ot backend. (It allows e.g. IP checking inside backend)
             self.user_cache = authenticate(username=username, password=password, request=self.request)
+            if self.user_cache is None:
+                #fallback for standard Django backend
+                self.user_cache = authenticate(username=username, password=password)
             if self.user_cache is None:
                 raise forms.ValidationError(_("Please enter a correct username and password. Note that both fields are case-sensitive."))
             elif not self.supports_inactive_user and not self.user_cache.is_active:

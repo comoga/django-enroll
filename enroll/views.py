@@ -50,8 +50,8 @@ class FailureMessageMixin(object):
 class LoginMixin(object):
     """Provides method to log user"""
 
-    def login_user(self, user):
-        anonymous_session_data = dict(self.request.session.items())
+    def login_user(self, request, user):
+        anonymous_session_data = dict(request.session.items())
         if not user.backend:
             #user must be annotated with backend, for auto login we can use first available
             for backend in get_backends():
@@ -62,14 +62,14 @@ class LoginMixin(object):
                 user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
                 break
 
-        auth_login(self.request, user)
+        auth_login(request, user)
 
-        if self.request.session.test_cookie_worked():
-            self.request.session.delete_test_cookie()
+        if request.session.test_cookie_worked():
+            request.session.delete_test_cookie()
 
         post_login.send(
             sender=user.__class__,
-            request=self.request,
+            request=request,
             user=user,
             session_data=anonymous_session_data
         )
@@ -87,7 +87,7 @@ class SuccessMessageFormView(SuccessMessageMixin, FormView):
 
 class SignUpView(TemplateResponseMixin, SuccessMessageMixin, LoginMixin, BaseCreateView):
     """See also BaseSignUpForm. It contains almost all logic around user registration."""
-    template_name = 'registration/registration_form.html'
+    template_name = 'enroll/signup.html'
     form_class = SignUpForm
     success_url = '/'
     success_message = _('An activation link has been sent to your e-mail address.')
@@ -104,7 +104,7 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, LoginMixin, BaseCre
         if self.login_on_success:
             #try to login here is OK. Following method log inactive user only if
             #backend with such support exists
-            self.login_user(self.object)
+            self.login_user(self.request, self.object)
 
         self.send_success_message()
         return response
@@ -135,7 +135,7 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, LoginMixin, Vi
         token.delete()
 
         if self.login_on_success:
-            self.login_user(user)
+            self.login_user(request, user)
 
         self.send_success_message()
         return http.HttpResponseRedirect(self.success_url)
@@ -146,7 +146,7 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, LoginMixin, Vi
 
 
 class PasswordResetView(SuccessMessageFormView):
-    template_name = 'registration/password_reset_form.html'
+    template_name = 'enroll/password_reset_form.html'
     form_class = PasswordResetStepOneForm
     success_url = '/'
     success_message = _('A verification link has been sent to your e-mail address.')
@@ -162,7 +162,7 @@ class PasswordResetView(SuccessMessageFormView):
 
 
 class VerifyPasswordResetView(LoginMixin, SuccessMessageFormView, FailureMessageMixin):
-    template_name ='registration/password_reset_confirm.html'
+    template_name ='enroll/password_reset_confirm.html'
     form_class = PasswordResetStepTwoForm
     success_url = '/'
     success_message = _('Your password has been updated.')
@@ -190,7 +190,7 @@ class VerifyPasswordResetView(LoginMixin, SuccessMessageFormView, FailureMessage
         result = super(VerifyPasswordResetView, self).form_valid(form)
         #login only after the user has been made active
         if self.login_on_success:
-            self.login_user(self.token.user)
+            self.login_user(self.request, self.token.user)
         self.token.delete()
         return result
 
@@ -201,7 +201,7 @@ class VerifyPasswordResetView(LoginMixin, SuccessMessageFormView, FailureMessage
 
 class ChangeEmailView(SuccessMessageFormView):
     form_class = ChangeEmailForm
-    template_name = 'registration/change_email.html'
+    template_name = 'enroll/change_email.html'
     success_url = '/'
     success_message = _('An activation link has been sent to your new address.')
 
@@ -248,7 +248,7 @@ class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):
 
 class LoginView(LoginMixin, FormView):
     form_class = RequestPassingAuthenticationForm
-    template_name = 'registration/login.html'
+    template_name = 'enroll/login.html'
     redirect_field_name = REDIRECT_FIELD_NAME
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
 
@@ -278,7 +278,7 @@ class LoginView(LoginMixin, FormView):
 
     def form_valid(self, form):
         user = form.get_user()
-        self.login_user(user)
+        self.login_user(self.request, user)
         return super(LoginView, self).form_valid(form)
 
     def get_context_data(self, **kwargs):

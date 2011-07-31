@@ -8,10 +8,11 @@ from enroll.views import LoginMixin
 class InlineLoginMiddleware(LoginMixin):
 
     def process_request(self, request):
+        form = None
         if request.method == 'POST' and request.POST.get('form_id') == 'loginform':
             form = RequestPassingAuthenticationForm(request=request, data=request.POST)
             if form.is_valid():
-                self.login_user(form.get_user())
+                self.login_user(request, form.get_user())
 
                 next = request.META.get('HTTP_REFERER', None)
                 if not next:
@@ -19,12 +20,15 @@ class InlineLoginMiddleware(LoginMixin):
                 if not next:
                     next = '/'
                 return HttpResponseRedirect(next)
+            request.login_form = form
         else:
-            form = RequestPassingAuthenticationForm(request=request, initial={'form_id': 'loginform'})
-        request.login_form = form
+            if not hasattr(request, 'user') or request.user.is_anonymous():
+                request.session.set_test_cookie()
+                request.login_form = RequestPassingAuthenticationForm(request=request, initial={'form_id': 'loginform'})
 
     def process_template_response(self, request, response):
-        response.context_data['login_form'] = request.login_form
+        if hasattr(request, 'login_form'):
+            response.context_data['login_form'] = request.login_form
         return response
 
 

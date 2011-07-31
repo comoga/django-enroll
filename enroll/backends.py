@@ -19,7 +19,7 @@ class ModelBackend(DjangoModelBackend):
             combined = q if combined is None else combined | q
         return User.objects.get(combined)
 
-    def authenticate_user(self, user, password, request):
+    def authenticate_user(self, user, password, request=None):
         return user if user.check_password(password) else None
 
     def authenticate(self, username=None, password=None, request=None):
