@@ -47,23 +47,26 @@ class FailureMessageMixin(object):
             messages.add_message(self.request, messages.WARNING, msg)
 
 
-class AutoLoginMixin(object):
+class LoginMixin(object):
     """Provides method to log user"""
-
-    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
 
     def login_user(self, user):
         anonymous_session_data = dict(self.request.session.items())
-        for backend in get_backends():
-            if not user.is_active:
-                #inactive user login is supported by Django 1.3
-                if not getattr(backend, 'supports_inactive_user', False):
-                    continue
-            #user must be annotated with backend
-            user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
-            break
+        if not user.backend:
+            #user must be annotated with backend, for auto login we can use first available
+            for backend in get_backends():
+                if not user.is_active:
+                    #inactive user login is supported by Django 1.3
+                    if not getattr(backend, 'supports_inactive_user', False):
+                        continue
+                user.backend = "%s.%s" % (backend.__module__, backend.__class__.__name__)
+                break
 
         auth_login(self.request, user)
+
+        if self.request.session.test_cookie_worked():
+            self.request.session.delete_test_cookie()
+
         post_login.send(
             sender=user.__class__,
             request=self.request,
@@ -82,12 +85,13 @@ class SuccessMessageFormView(SuccessMessageMixin, FormView):
 
 # --------------  Regular Views ----------------------
 
-class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, BaseCreateView):
+class SignUpView(TemplateResponseMixin, SuccessMessageMixin, LoginMixin, BaseCreateView):
     """See also BaseSignUpForm. It contains almost all logic around user registration."""
     template_name = 'registration/registration_form.html'
     form_class = SignUpForm
     success_url = '/'
     success_message = _('An activation link has been sent to your e-mail address.')
+    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request)
@@ -106,11 +110,12 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, Bas
         return response
 
 
-class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, AutoLoginMixin, View):
+class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, LoginMixin, View):
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
     success_message = _('Your account has been activated.')
     failure_url = '/'
     failure_message = _('Invalid activation link.')
+    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
 
     def get(self, request, verification_key):
         try:
@@ -156,14 +161,14 @@ class PasswordResetView(SuccessMessageFormView):
         return super(PasswordResetView, self).form_valid(form)
 
 
-class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView, FailureMessageMixin):
+class VerifyPasswordResetView(LoginMixin, SuccessMessageFormView, FailureMessageMixin):
     template_name ='registration/password_reset_confirm.html'
     form_class = PasswordResetStepTwoForm
     success_url = '/'
     success_message = _('Your password has been updated.')
-    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
     failure_url = '/'
     failure_message = _('Invalid verification link.')
+    login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request, user=self.token.user)
@@ -241,7 +246,7 @@ class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):
         return http.HttpResponseRedirect(self.failure_url)
 
 
-class LoginView(FormView):
+class LoginView(LoginMixin, FormView):
     form_class = RequestPassingAuthenticationForm
     template_name = 'registration/login.html'
     redirect_field_name = REDIRECT_FIELD_NAME
@@ -272,15 +277,8 @@ class LoginView(FormView):
         return redirect_to
 
     def form_valid(self, form):
-        anonymous_session_data = dict(self.request.session.items())
-        # Okay, security checks complete. Log the user in.
         user = form.get_user()
-        auth_login(self.request, user)
-
-        if self.request.session.test_cookie_worked():
-            self.request.session.delete_test_cookie()
-
-        post_login.send(sender=user.__class__, request=self.request, user=user, session_data=anonymous_session_data)
+        self.login_user(user)
         return super(LoginView, self).form_valid(form)
 
     def get_context_data(self, **kwargs):
