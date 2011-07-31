@@ -148,6 +148,8 @@ class RequestPassingAuthenticationForm(RequestAcceptingForm, DjangoAuthenticatio
     """
     supports_inactive_user = getattr(settings, 'ENROLL_AUTH_FORM_SUPPORTS_INACTIVE_USER', False)
 
+    form_id = forms.CharField(widget=forms.HiddenInput()) #used by InlineLoginFormMiddleware to identify login form
+
     #copied and patched from parent class
     def clean(self):
         username = self.cleaned_data.get('username')
