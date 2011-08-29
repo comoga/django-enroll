@@ -207,7 +207,7 @@ class ChangeEmailForm(RequestAcceptingForm):
 
     __metaclass__ = ExplicitValidationFormMetaclass
 
-    email = forms.EmailField(required=True, widget=forms.TextInput(attrs=dict(maxlength=75)), label=_(u'email address'))
+    email = forms.EmailField(required=True, widget=forms.TextInput(attrs=dict(maxlength=75)), label=_(u'E-mail address'))
 
     field_validators = { #we need only validators for email from settings value
         'email': getattr(settings, 'ENROLL_FORM_VALIDATORS', DEFAULT_FORM_VALIDATORS ).get('email', []),
