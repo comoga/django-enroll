@@ -10,8 +10,7 @@ from django.conf import settings
 from django.contrib.sites.models import get_current_site
 from django.utils.decorators import method_decorator
 from django.views.decorators.cache import never_cache
-from django.http import HttpResponseNotFound
-#from django.utils.translation import ugettext_lazy as _
+from django.utils.translation import ugettext_lazy as _
 
 from enroll.forms import SignUpForm, RequestPassingAuthenticationForm,\
     PasswordResetStepOneForm, PasswordResetStepTwoForm, ChangeEmailForm
@@ -88,6 +87,7 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, Bas
     template_name = 'registration/registration_form.html'
     form_class = SignUpForm
     success_url = '/'
+    success_message = _('An activation link has been sent to your e-mail address.')
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request)
@@ -108,7 +108,9 @@ class SignUpView(TemplateResponseMixin, SuccessMessageMixin, AutoLoginMixin, Bas
 
 class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, AutoLoginMixin, View):
     success_url = getattr(settings, 'LOGIN_REDIRECT_URL')
+    success_message = _('Your account has been activated.')
     failure_url = '/'
+    failure_message = _('Invalid activation link.')
 
     def get(self, request, verification_key):
         try:
@@ -118,10 +120,10 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, AutoLoginMixin
                             verification_type=VerificationToken.TYPE_SIGN_UP
                         )
         except VerificationToken.DoesNotExist:
-            return self.on_failure(verification_key)
-        return self.on_success(token)
+            return self.on_failure(request, verification_key)
+        return self.on_success(request, token)
 
-    def on_success(self, token):
+    def on_success(self, request, token):
         user = token.user
 
         token.activate_user()
@@ -133,16 +135,16 @@ class VerifyAccountView(SuccessMessageMixin, FailureMessageMixin, AutoLoginMixin
         self.send_success_message()
         return http.HttpResponseRedirect(self.success_url)
 
-    def on_failure(self, verification_key):
+    def on_failure(self, request, verification_key):
         self.send_failure_message()
         return http.HttpResponseRedirect(self.failure_url)
 
 
 class PasswordResetView(SuccessMessageFormView):
-    """Redirect to given URL or render page from template on success. Optionally send message using djnago.contrib.messages"""
     template_name = 'registration/password_reset_form.html'
     form_class = PasswordResetStepOneForm
     success_url = '/'
+    success_message = _('A verification link has been sent to your e-mail address.')
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request)
@@ -154,40 +156,49 @@ class PasswordResetView(SuccessMessageFormView):
         return super(PasswordResetView, self).form_valid(form)
 
 
-class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView):
+class VerifyPasswordResetView(AutoLoginMixin, SuccessMessageFormView, FailureMessageMixin):
     template_name ='registration/password_reset_confirm.html'
     form_class = PasswordResetStepTwoForm
     success_url = '/'
+    success_message = _('Your password has been updated.')
     login_on_success = getattr(settings, 'ENROLL_AUTO_LOGIN', True)
+    failure_url = '/'
+    failure_message = _('Invalid verification link.')
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request, user=self.token.user)
         kwargs.update(super(VerifyPasswordResetView, self).get_form_kwargs())
         return kwargs
 
-    def token_does_not_exist(self, request, verification_key):
-        return HttpResponseNotFound()
-
     @method_decorator(never_cache)
     def dispatch(self, request, verification_key, *args, **kwargs):
+        self.request = request
         try:
             self.token = VerificationToken.objects.get(key=verification_key)
         except VerificationToken.DoesNotExist:
-            return self.token_does_not_exist(request, verification_key)
+            return self.on_failure(request, verification_key)
         return super(VerifyPasswordResetView, self).dispatch(request, *args, **kwargs)
 
     def form_valid(self, form):
         form.save()
+        #update the password first while it may also activate the user if inactive
+        result = super(VerifyPasswordResetView, self).form_valid(form)
+        #login only after the user has been made active
         if self.login_on_success:
             self.login_user(self.token.user)
         self.token.delete()
-        return super(VerifyPasswordResetView, self).form_valid(form)
+        return result
+
+    def on_failure(self, request, verification_key):
+        self.send_failure_message()
+        return http.HttpResponseRedirect(self.failure_url)
 
 
 class ChangeEmailView(SuccessMessageFormView):
     form_class = ChangeEmailForm
     template_name = 'registration/change_email.html'
     success_url = '/'
+    success_message = _('An activation link has been sent to your new address.')
 
     def get_form_kwargs(self):
         kwargs = dict(request=self.request)
@@ -201,7 +212,9 @@ class ChangeEmailView(SuccessMessageFormView):
 
 class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):
     success_url = '/'
+    success_message = _('Your e-mail address has been updated.')
     failure_url = '/'
+    failure_message = _('Invalid activation link.')
 
     def get(self, request, verification_key):
         try:
@@ -211,10 +224,10 @@ class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):
                             verification_type=VerificationToken.TYPE_EMAIL_CHANGE
                         )
         except VerificationToken.DoesNotExist:
-            return self.on_failure(verification_key)
-        return self.on_success(token)
+            return self.on_failure(request, verification_key)
+        return self.on_success(request, token)
 
-    def on_success(self, token):
+    def on_success(self, request, token):
         user = token.user
         user.email = token.email
         user.save()
@@ -223,7 +236,7 @@ class VerifyEmailChangeView(SuccessMessageMixin, FailureMessageMixin, View):
         self.send_success_message()
         return http.HttpResponseRedirect(self.success_url)
 
-    def on_failure(self, verification_key):
+    def on_failure(self, request, verification_key):
         self.send_failure_message()
         return http.HttpResponseRedirect(self.failure_url)
 
@@ -237,6 +250,11 @@ class LoginView(FormView):
     @method_decorator(never_cache)
     def dispatch(self, *args, **kwargs):
         return super(LoginView, self).dispatch(*args, **kwargs)
+
+    def get_form_kwargs(self):
+        kwargs = dict(request=self.request)
+        kwargs.update(super(LoginView, self).get_form_kwargs())
+        return kwargs
 
     def get_redirect_to(self):
         return self.request.REQUEST.get(self.redirect_field_name, '')

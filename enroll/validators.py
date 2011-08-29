@@ -61,9 +61,9 @@ class TooSimplePasswordValidator(object):
     LOWERCASE_SEQUENCE = 2 * string.lowercase
     DIGIT_SEQUENCE = 2 * string.digits
 
-    def validate_sequnce(self, password, sequence, message):
+    def validate_sequence(self, password, sequence, message):
         if password in sequence or password[::-1] in sequence:
-            raise ValidationError(message)
+            raise ValidationError(message, code=self.__class__)
 
     def __init__(self, min_unique_chars=3):
         self.min_unique_chars = min_unique_chars
@@ -71,11 +71,11 @@ class TooSimplePasswordValidator(object):
     def __call__(self, password):
         #Case sensitive validations
         if len(set(password)) < self.min_unique_chars:
-            raise ValidationError(_(u'Password must contains at least %d unique characters') % self.min_unique_chars)
+            raise ValidationError(_(u'Password must contains at least %d unique characters') % self.min_unique_chars, code=self.__class__)
 
         #Case insensitive validations
         password = password.lower()
-        self.validate_sequnce(password, self.LOWERCASE_SEQUENCE, _(u'Password cannot be ascending or descending sequence.'))
-        self.validate_sequnce(password, self.DIGIT_SEQUENCE, _(u'Password cannot be ascending or descending sequence.'))
-        self.validate_sequnce(password, getattr(settings , 'ENROLL_FORBIDDEN_PASSWORDS', []), _(u'Password is not allowed.'))
+        self.validate_sequence(password, self.LOWERCASE_SEQUENCE, _(u'Password cannot be ascending or descending sequence.'))
+        self.validate_sequence(password, self.DIGIT_SEQUENCE, _(u'Password cannot be ascending or descending sequence.'))
+        self.validate_sequence(password, getattr(settings, 'ENROLL_FORBIDDEN_PASSWORDS', []), _(u'This password is not allowed.'))
 
